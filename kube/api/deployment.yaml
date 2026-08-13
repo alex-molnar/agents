@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: agents
+  labels:
+    app: api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: kingbrady/custom-agents-api:0.1.0
+        ports:
+          - containerPort: 80
+        env:
+          - name: OLLAMA_API_URL
+            value: "http://ollama.llm.svc.cluster.local:11434/api/{path}"

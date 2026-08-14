@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agents-pipeline-sa
+  namespace: agents
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agents-pipeline-sa-token
+  namespace: agents
+  annotations:
+    kubernetes.io/service-account.name: agents-pipeline-sa
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agents-pipeline-sa-admin
+  namespace: agents
+subjects:
+  - kind: ServiceAccount
+    name: agents-pipeline-sa
+    namespace: agents
+roleRef:
+  kind: ClusterRole
+  name: admin
+  apiGroup: rbac.authorization.k8s.io

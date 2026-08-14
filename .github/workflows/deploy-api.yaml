@@ -42,7 +42,7 @@ jobs:
       - name: Build and push Custom Agents API
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: api
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |

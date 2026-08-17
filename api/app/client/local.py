@@ -1,5 +1,5 @@
 from requests import post, get
-from json import loads 
+from json import loads, dumps
 from os import getenv
 
 class Client:
@@ -46,3 +46,13 @@ class Client:
             "status": "success",
             "response": response_text
         }
+
+    def streamed_chat(self, prompt: str, model: str = "qwen2.5:3b"):
+        response = post(self.url.format(path='chat'), json=self.__get_req(prompt, model), stream=True)
+        for line in response.iter_lines():
+            if line:
+                data = loads(line.decode('utf-8'))
+                if data['done'] == True:
+                    yield f"event: end\ndata: {dumps({'message': 'done'})}\n\n"
+                else:
+                    yield f"event: message\ndata: {dumps({'message': data['message']['content']})}\n\n"

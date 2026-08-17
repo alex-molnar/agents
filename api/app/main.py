@@ -1,9 +1,10 @@
-from datetime import datetime
-from fastapi import FastAPI, Response # pyright: ignore[reportMissingImports]
-from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissingImports]
+from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 from logging import basicConfig, getLogger, INFO
 from os import getenv
 from dataclasses import dataclass
+
+from starlette.responses import StreamingResponse
 from .client.local import Client
 from uvicorn import run
 
@@ -74,6 +75,14 @@ def chat(input: tmp, response: Response):
     result = client.send_request(input.prompt, input.model)
     return wrap(result, endpoint="/chat", method="POST", response=response)
 
+@app.get("/chat-stream/{prompt}", status_code=200)
+def chat_stream(prompt: str):
+    log_request(endpoint="/chat-stream", method="GET", data={"prompt": prompt})
+    client = Client()
+    return StreamingResponse(
+        client.streamed_chat(prompt, model="qwen2.5:3b"),
+        media_type="text/event-stream"
+    )
 
 if __name__ == "__main__":
     run(app, host="0.0.0.0", port=8000)

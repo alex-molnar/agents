@@ -24,3 +24,11 @@ spec:
         env:
           - name: OLLAMA_API_URL
             value: "http://ollama.llm.svc.cluster.local:11434/api/{path}"
+          - name: CORS_ALLOW_ORIGINS
+            value: "https://chat.agent.kak.im"
+          - name: CORS_ALLOW_CREDENTIALS
+            value: "true"
+          - name: CORS_ALLOW_METHODS
+            value: "GET"
+          - name: CORS_ALLOW_HEADERS
+            value: "*"

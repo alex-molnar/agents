@@ -1,0 +1,163 @@
+
+
+*{
+  margin: 0;
+  padding: 0;  
+}
+
+html{
+  color: #f0f0f0;
+}
+
+body{
+  min-height: 100vh;
+  background: #0b0d15;
+  color: #a2a5b3;
+  align-content: center;
+}
+
+h1{
+  color: white;
+}
+
+.card {
+  margin: 0 auto;
+  padding: 2em;
+  width: 500px;
+  background: #1c1f2b;
+  text-align: center;
+  border-radius: 10px;
+  position: relative;
+}
+
+@property --angle{
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.card::after, .card::before{
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: -1;
+  padding: 3px;
+  border-radius: 10px;
+}
+.card::before{
+  filter: blur(1.5rem);
+  opacity: 0.5;
+}
+
+.idle::after, .idle::before{
+  background-color: #8800ff;
+}
+
+.thinking::after, .thinking::before{
+  background-image: conic-gradient(from var(--angle), transparent 60%, #ffa845);
+  animation: 3s spin-backwards linear infinite;
+}
+
+.loading::after, .loading::before{
+  background-image: conic-gradient(from var(--angle), transparent 60%, #ff4545, #00ff99, #006aff, #ff0095, #ff4545);
+  animation: 3s spin linear infinite;
+}
+
+.finished::after, .finished::before{
+  background-color: #00ff99;
+}
+
+@keyframes spin{
+  from{
+    --angle: 0deg;
+  }
+  to{
+    --angle: 360deg;
+  }
+}
+
+@keyframes spin-backwards{
+  from{
+    --angle: 0deg;
+  }
+  to{
+    --angle: -360deg;
+  }
+}
+
+.input {
+  margin: 0 auto 2em;
+  padding: 0.5em;
+  width: 600px;
+  background: #0b0d15;
+  text-align: center;
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5em;
+  align-items: center;
+  box-sizing: border-box;
+}
+/* 
+.input::after, .input::before{
+  content: '';
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  z-index: -1;
+  padding: 3px;
+  border-radius: 10px;
+  background-color: #8800ff;
+}
+
+.input::before{
+  filter: blur(1.5rem);
+  opacity: 0.5;
+} */
+
+.input input {
+  padding: 0.7em;
+  background: #2a2d3a;
+  border: 1px solid #3a3d4a;
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-size: 1.1em;
+  flex: 1;
+}
+
+.input input::placeholder {
+  color: #5a5d6a;
+}
+
+.input select {
+  padding: 1em 0.5em;
+  background: #2a2d3a;
+  border: 1px solid #3a3d4a;
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-size: 0.8em;
+}
+
+.input button {
+  padding: 1em 0.7em;
+  background: #8800ff;
+  border: none;
+  border-radius: 5px;
+  color: #f0f0f0;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.input button:hover {
+  background: #6600cc;
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div id="prompt-input-container" class="input">
+        <input type="text" id="prompt-input" placeholder="Enter your prompt here" onfocus="this.oldvalue = this.value;" oninput="rePrompt(this);this.oldvalue = this.value;">
+        <select id="model-select"></select>
+        <span style="background-color: red; padding: 0.8em 0.5em; display: none; border-radius: 5px; color: white" id="model-error">Could not fetch models</span>
+        <button onclick="sendPrompt()">Send Prompt</button>
+    </div>
+    <div id="prompt-response" class="card idle" style="display: none;">
+        <h2 id="response-title">Your question will appear here</h2>
+        <br><br>
+        <p id="response-text">Your answers will appear here</p>
+    </div>
+
+    <script> 
+        document.getElementById("prompt-input").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                sendPrompt();
+            }
+        });
+
+        document.getElementById("prompt-input").focus();
+
+        getModels()
+    </script>
+</body>
+</html>

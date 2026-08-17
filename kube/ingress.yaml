@@ -15,6 +15,9 @@ spec:
     - hosts:
         - api.agents.kak.im
       secretName: api-agents-tls
+    - hosts:
+        - chat.agents.kak.im
+      secretName: chat-agents-tls
   rules:
     - host: api.agents.kak.im
       http:
@@ -22,6 +25,16 @@ spec:
         - backend:
             service:
               name: api
+              port:
+                number: 80
+          path: /
+          pathType: Prefix
+    - host: chat.agents.kak.im
+      http:
+        paths:
+        - backend:
+            service:
+              name: chat
               port:
                 number: 80
           path: /

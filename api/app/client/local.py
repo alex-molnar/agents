@@ -31,10 +31,6 @@ class Client:
     def get_models(self):
         response = get(self.url.format(path='tags'))
         if response.status_code == 200:
-            print(dumps(response.json()['models'], indent=2))
-            for m in response.json()['models']:
-                print(m)
-                print('capabilities' in m)
             return {
                 "models": [
                     {

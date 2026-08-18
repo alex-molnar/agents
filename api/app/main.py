@@ -5,6 +5,7 @@ from os import getenv
 
 from app.client.local import available_models
 from app.routers import agents, health
+from app.middleware.logs import logging_endpoint
 from uvicorn import run
 
 
@@ -19,6 +20,8 @@ app.add_middleware(
     allow_methods=getenv("CORS_ALLOW_METHODS", "*").split(","),
     allow_headers=getenv("CORS_ALLOW_HEADERS", "*").split(","),
 )
+
+app.middleware("http")(logging_endpoint)
 
 log = getLogger(__name__)
 

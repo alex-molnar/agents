@@ -5,7 +5,7 @@ from os import getenv
 from dataclasses import dataclass
 
 from starlette.responses import StreamingResponse
-from .client.local import Client
+from app.client.local import available_models, get_version, send_request, streamed_chat
 from uvicorn import run
 
 app = FastAPI()
@@ -58,29 +58,23 @@ def health_check(response: Response):
 @app.get("/readiness", status_code=200)
 def readiness_check(response: Response):
     log_request(endpoint="/readiness", method="GET")
-    client = Client()
-    return wrap(client.get_version(), endpoint="/readiness", method="GET", response=response, status_code=503)
+    return wrap(get_version(), endpoint="/readiness", method="GET", response=response, status_code=503)
 
 @app.get("/models", status_code=200)
 def get_models(response: Response):
     log_request(endpoint="/models", method="GET")
-    client = Client()
-    models = client.get_models()
-    return wrap(models, endpoint="/models", method="GET", response=response)
+    return wrap(available_models(), endpoint="/models", method="GET", response=response)
 
-@app.post("/chat", status_code=200)
+@app.get("/chat", status_code=200)
 def chat(input: tmp, response: Response):
-    log_request(endpoint="/chat", method="POST", data=input)
-    client = Client()
-    result = client.send_request(input.prompt, input.model)
-    return wrap(result, endpoint="/chat", method="POST", response=response)
+    log_request(endpoint="/chat", method="GET", data=input)
+    return wrap(send_request(input.prompt, input.model), endpoint="/chat", method="GET", response=response)
 
 @app.get("/chat-stream/{prompt}", status_code=200)
 def chat_stream(prompt: str):
     log_request(endpoint="/chat-stream", method="GET", data={"prompt": prompt})
-    client = Client()
     return StreamingResponse(
-        client.streamed_chat(prompt, model="qwen2.5:3b"),
+        streamed_chat(prompt, model="qwen2.5:3b"),
         media_type="text/event-stream"
     )
 

@@ -1,84 +1,117 @@
+from logging import getLogger
+
 from requests import post, get
 from json import loads, dumps
 from os import getenv
 
+
+log = getLogger(__name__)
+
+
+
 model_descriptions = {
     "gemma4:e4b": "Flagship model with 4b context window. Ideal for heavy tasks.",
-    "mistral:7b": "Large model for bigger workloads. Expect more accurate anserw but a bigger waiting time",
+    "mistral:7b": "Large model for bigger workloads. Expect more accurate answer but a bigger waiting time",
     "qwen3.5:4b": "Middle class model, up to date processing, with middle of the pack memory overhead.",
-    "phi3:mini": "Mini model. Ideal for quick small tasks",
     "llama3.2:latest": "Ollama's own edge model. Should be ideal for small to medium tasks",
-    "qwen2.5:3b": "Small edge model for quick and accurate responses"
+    "qwen2.5:3b": "Small edge model for quick and accurate responses",
+    "minimax-m3:cloud": "Cloud model for quick and accurate responses, with vision",
+    "gpt-oss:120b-cloud": "Open source model by OpenAI for chat responses",
+    "gemma4:31b-cloud": "Large cloud model for bigger workloads. Expect more accurate answer but a bigger waiting time",
 }
 
-class Client:
-    def __init__(self):
-        self.url = getenv('OLLAMA_API_URL', 'http://localhost:11434/api/{path}')
 
-    def __get_req(self, prompt: str, model: str = "qwen2.5:3b", history: list = [], tools: list = []):
+model_weights = {
+    "gemma4:e4b": 5,
+    "mistral:7b": 6,
+    "qwen3.5:4b": 4,
+    "llama3.2:latest": 8,
+    "qwen2.5:3b": 7,
+    "minimax-m3:cloud": 2,
+    "gpt-oss:120b-cloud": 1,
+    "gemma4:31b-cloud": 3,
+}
+
+
+OLLAMA_LOCAL_URL = getenv('OLLAMA_API_URL', 'http://localhost:11434/api/{path}')
+OLLAMA_REMOTE_URL = getenv('OLLAMA_REMOTE_API_URL', 'https://ollama.com/api/{path}')
+
+
+def __get_req_body(prompt: str, model: str = "qwen2.5:3b", history: list = [], tools: list = []):
+    return {
+        "model": model,
+        "messages": history + [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "tools": tools,
+        "stream": True
+    }
+
+def available_models():
+    response = get(OLLAMA_LOCAL_URL.format(path='tags'))
+    log.debug(f"Received response from {OLLAMA_LOCAL_URL.format(path='tags')}: {response.status_code} - {response.text}")
+    if response.status_code == 200:
         return {
-            "model": model,
-            "messages": history + [
+            "models": sorted([
                 {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "tools": tools,
-            "stream": True
+                    'name': m['name'], 
+                    'displayName': m['name'].split(':')[0],
+                    'thinking': 'thinking' in m.get('capabilities', []),
+                    'tools_support': 'tools' in m.get('capabilities', []),
+                    'vision_support': 'vision' in m.get('capabilities', []),
+                    'allowed': 'remote_model' not in m,
+                    'weight': model_weights.get(m['name'], 200000),
+                } for m in response.json()['models']
+            ], key=lambda x: x['weight']),
+            "default": "qwen2.5:3b"
         }
+    else:
+        return f'Error fetching models: {response.status_code} - {response.text}'
 
-    def get_models(self):
-        response = get(self.url.format(path='tags'))
-        if response.status_code == 200:
-            return {
-                "models": [
-                    {
-                        'name': m['name'], 
-                        'displayName': m['name'].split(':')[0],
-                        'thinking': 'thinking' in m.get('capabilities', []),
-                        'tools_support': 'tools' in m.get('capabilities', []),
-                        'allowed': True
-                    } for m in response.json()['models']
-                ] + [{
-                    'name': 'gpt-5.1:latest',
-                    'displayName': 'GPT 5.1 Cloud',
-                    'thinking': True,
-                    'tools_support': True,
-                    'allowed': False
-                }],
-                "default": "qwen2.5:3b"
-            }
-
-    def get_version(self):
-        response = get(self.url.format(path='version'))
-        if response.status_code == 200:
-            return {
-                "status": "up",
-                "ollama": {
-                    "status": "up",
-                    "version": response.json()['version']
-                },
-            }
-
-    def send_request(self, prompt: str, model: str = "qwen2.5:3b"):
-        response = post(self.url.format(path='chat'), json=self.__get_req(prompt, model), stream=True)
-        response_text = ''
-        for line in response.iter_lines():
-            if line:
-                data = loads(line.decode('utf-8'))
-                response_text += data['message']['content']
+def get_version():
+    response = get(OLLAMA_LOCAL_URL.format(path='version'))
+    log.debug(f"Received response from {OLLAMA_LOCAL_URL.format(path='version')}: {response.status_code} - {response.text}")
+    if response.status_code == 200:
         return {
-            "status": "success",
-            "response": response_text
+            "status": "up",
+            "ollama": {
+                "status": "up",
+                "version": response.json()['version']
+            },
+        }
+    else:
+        return {
+            "status": "up",
+            "ollama": {
+                "status": "down",
+                "version": None
+            },
         }
 
-    def streamed_chat(self, prompt: str, model: str = "qwen2.5:3b"):
-        response = post(self.url.format(path='chat'), json=self.__get_req(prompt, model), stream=True)
-        for line in response.iter_lines():
-            if line:
-                data = loads(line.decode('utf-8'))
-                if data['done'] == True:
-                    yield f"event: end\ndata: {dumps({'message': 'done'})}\n\n"
-                else:
-                    yield f"event: message\ndata: {dumps({'message': data['message']['content']})}\n\n"
+def send_request(prompt: str, model: str = "qwen2.5:3b"):
+    response = post(OLLAMA_LOCAL_URL.format(path='chat'), json=__get_req_body(prompt, model), stream=True)
+    response_text = ''
+    for line in response.iter_lines():
+        if line:
+            data = loads(line.decode('utf-8'))
+            response_text += data['message']['content']
+    log.debug(f"Received response from {OLLAMA_LOCAL_URL.format(path='chat')}: {response.status_code} - {response_text}")
+    if response.status_code != 200:
+        return f"Error sending request: {response.status_code} - {response_text}"
+    return {
+        "status": "success",
+        "response": response_text
+    }
+
+def streamed_chat(prompt: str, model: str = "qwen2.5:3b"):
+    response = post(OLLAMA_LOCAL_URL.format(path='chat'), json=__get_req_body(prompt, model=model), stream=True)
+    for line in response.iter_lines():
+        if line:
+            data = loads(line.decode('utf-8'))
+            if data['done'] == True:
+                yield f"event: end\ndata: {dumps({'message': 'done'})}\n\n"
+            else:
+                yield f"event: message\ndata: {dumps({'message': data['message']['content']})}\n\n"

@@ -4,15 +4,20 @@ from logging import basicConfig, getLogger, INFO
 from os import getenv
 
 from app.client.local import available_models
-from app.routers import agents, health
+from app.routers import agents, health, metrics
 from app.middleware.logs import logging_endpoint
+from app.middleware.metrics import metrics_middleware, startup_event
 from uvicorn import run
 
 
 app = FastAPI()
+
 app.include_router(health.router)
 app.include_router(agents.router)
+app.include_router(metrics.router)
 
+app.middleware("http")(logging_endpoint)
+app.middleware("http")(metrics_middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=getenv("CORS_ALLOW_ORIGINS", "*").split(","),
@@ -21,7 +26,7 @@ app.add_middleware(
     allow_headers=getenv("CORS_ALLOW_HEADERS", "*").split(","),
 )
 
-app.middleware("http")(logging_endpoint)
+app.on_event("startup")(startup_event) # TODO update this to non deprecated one
 
 log = getLogger(__name__)
 

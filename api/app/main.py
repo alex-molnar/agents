@@ -5,12 +5,14 @@ from os import getenv
 from dataclasses import dataclass
 
 from starlette.responses import StreamingResponse
-from app.client.local import available_models, get_version, send_request, streamed_chat
+from app.client.local import available_models, get_version
+from app.agents.chatbot import chat
+from app.routers import agents
 from uvicorn import run
 
 app = FastAPI()
+app.include_router(agents.router)
 
-# Add CORS middleware to allow cross-origin requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=getenv("CORS_ALLOW_ORIGINS", "*").split(","),
@@ -65,24 +67,11 @@ def get_models(response: Response):
     log_request(endpoint="/models", method="GET")
     return wrap(available_models(), endpoint="/models", method="GET", response=response)
 
-@app.get("/chat", status_code=200)
-def chat(input: tmp, response: Response):
-    log_request(endpoint="/chat", method="GET", data=input)
-    return wrap(send_request(input.prompt, input.model), endpoint="/chat", method="GET", response=response)
-
-@app.get("/chat-stream/{prompt}", status_code=200)
-def chat_stream(prompt: str):
-    log_request(endpoint="/chat-stream", method="GET", data={"prompt": prompt})
-    return StreamingResponse(
-        streamed_chat(prompt, model="qwen2.5:3b"),
-        media_type="text/event-stream"
-    )
-
 @app.get("/model/{model}/chat-stream/{prompt}", status_code=200)
 def chat_stream(model: str, prompt: str):
     log_request(endpoint="/model/<model>/chat-stream/<prompt>", method="GET", data={"model": model, "prompt": prompt})
     return StreamingResponse(
-        streamed_chat(prompt, model=model),
+        chat(prompt, model=model),
         media_type="text/event-stream"
     )
 

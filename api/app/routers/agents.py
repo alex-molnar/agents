@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
+from fastapi.responses import StreamingResponse
 
 from app.agents.chatbot import chat
 
@@ -18,6 +19,8 @@ def read_items():
     ]
 
 @router.get("/chatbot")
-def read_chatbot(model: str, prompt: str):
-    return chat(prompt=prompt, model=model)
-
+def read_chatbot(model: str, prompt: str, response: Response):
+    return StreamingResponse(
+        chat(prompt=prompt, model=model),
+        media_type="text/event-stream"
+    )

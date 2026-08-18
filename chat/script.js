@@ -7,7 +7,7 @@ function sendPrompt() {
     const prompt = promptInput.value;
     const model = document.getElementById("model-select").value;
 
-    const evtSource = new EventSource(`${baseUrl}/model/${model}/chat-stream/${prompt}`);
+    const evtSource = new EventSource(`${baseUrl}/agents/chatbot?model=${model}&prompt=${encodeURIComponent(prompt)}`);
 
     const response = document.getElementById("response-text");
     const responseTitle = document.getElementById("response-title");
@@ -38,7 +38,6 @@ function sendPrompt() {
     });
 
     evtSource.addEventListener("end", function (event) {
-        console.log("Stream ended:", message);
         card.classList.remove("loading");
         card.classList.add("finished");
         evtSource.close();

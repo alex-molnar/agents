@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 
 from app.agents.chatbot import chat
 
@@ -6,9 +6,6 @@ from app.agents.chatbot import chat
 router = APIRouter(
     prefix="/agents"
 )
-
-
-fake_items_db = {"plumbus": {"name": "Plumbus"}, "gun": {"name": "Portal Gun"}}
 
 
 @router.get("/")

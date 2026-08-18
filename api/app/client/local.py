@@ -62,16 +62,7 @@ def get_version():
     if response.status_code == 200:
         return {
             "status": "up",
-            "ollama": {
-                "status": "up",
-                "version": response.json()['version']
-            },
+            "version": response.json()['version']
         }
     else:
-        return {
-            "status": "up",
-            "ollama": {
-                "status": "down",
-                "version": None
-            },
-        }
+        raise Exception(f'Error fetching version: {response.status_code} - {response.text}')

@@ -1,12 +1,13 @@
 let message = "";
 let thinking = false;
+let baseUrl = "PARAM_BASE_URL";
 
 function sendPrompt() {
     const promptInput = document.getElementById("prompt-input");
     const prompt = promptInput.value;
     const model = document.getElementById("model-select").value;
 
-    const evtSource = new EventSource(`https://api.agents.kak.im/chat-stream/${prompt}`);
+    const evtSource = new EventSource(`${baseUrl}/chat-stream/${prompt}`);
 
     const response = document.getElementById("response-text");
     const responseTitle = document.getElementById("response-title");
@@ -59,7 +60,7 @@ function rePrompt(input) {
 }
 
 function getModels() {
-    const request = new Request("https://api.agents.kak.im/models");
+    const request = new Request(`${baseUrl}/models`);
     fetch(request)
         .then((response) => {
             if (response.status == 200) {

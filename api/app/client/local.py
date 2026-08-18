@@ -47,7 +47,8 @@ def __get_req_body(prompt: str, model: str = "qwen2.5:3b", history: list = [], t
             }
         ],
         "tools": tools,
-        "stream": True
+        "stream": True,
+        "think": False  # TODO: think about thinking
     }
 
 def available_models():
@@ -94,13 +95,13 @@ def get_version():
 def send_request(prompt: str, model: str = "qwen2.5:3b"):
     response = post(OLLAMA_LOCAL_URL.format(path='chat'), json=__get_req_body(prompt, model), stream=True)
     response_text = ''
+    if response.status_code != 200:
+        log.warning(f"Error sending request to {OLLAMA_LOCAL_URL.format(path='chat')}: {response.status_code} - {response.text}")
+        return f"Error sending request: {response.status_code} - {response.text}"
     for line in response.iter_lines():
         if line:
             data = loads(line.decode('utf-8'))
             response_text += data['message']['content']
-    log.debug(f"Received response from {OLLAMA_LOCAL_URL.format(path='chat')}: {response.status_code} - {response_text}")
-    if response.status_code != 200:
-        return f"Error sending request: {response.status_code} - {response_text}"
     return {
         "status": "success",
         "response": response_text
@@ -108,6 +109,9 @@ def send_request(prompt: str, model: str = "qwen2.5:3b"):
 
 def streamed_chat(prompt: str, model: str = "qwen2.5:3b"):
     response = post(OLLAMA_LOCAL_URL.format(path='chat'), json=__get_req_body(prompt, model=model), stream=True)
+    if response.status_code != 200:
+        log.warning(f"Error sending request to {OLLAMA_LOCAL_URL.format(path='chat')}: {response.status_code} - {response.text}")
+        return f"Error sending request: {response.status_code} - {response.text}"
     for line in response.iter_lines():
         if line:
             data = loads(line.decode('utf-8'))

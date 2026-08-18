@@ -7,7 +7,7 @@ function sendPrompt() {
     const prompt = promptInput.value;
     const model = document.getElementById("model-select").value;
 
-    const evtSource = new EventSource(`${baseUrl}/chat-stream/${prompt}`);
+    const evtSource = new EventSource(`${baseUrl}/model/${model}/chat-stream/${prompt}`);
 
     const response = document.getElementById("response-text");
     const responseTitle = document.getElementById("response-title");

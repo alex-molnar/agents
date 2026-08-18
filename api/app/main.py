@@ -78,5 +78,13 @@ def chat_stream(prompt: str):
         media_type="text/event-stream"
     )
 
+@app.get("/model/{model}/chat-stream/{prompt}", status_code=200)
+def chat_stream(model: str, prompt: str):
+    log_request(endpoint="/model/<model>/chat-stream/<prompt>", method="GET", data={"model": model, "prompt": prompt})
+    return StreamingResponse(
+        streamed_chat(prompt, model=model),
+        media_type="text/event-stream"
+    )
+
 if __name__ == "__main__":
     run(app, host="0.0.0.0", port=8000)

@@ -1,0 +1,20 @@
+#!/bin/zsh
+
+if [ "$1" = "api" ]; then
+  port="8080"
+elif [ "$1" = "chat" ]; then
+  port="3000"
+else
+  echo "Usage: $0 <api|chat>"
+  exit 1
+fi
+
+docker run --rm \
+  -p $port:80 \
+  --env LOG_LEVEL=DEBUG \
+  --env OLLAMA_API_URL=http://host.docker.internal:11434/api/{path} \
+  $( \
+    docker buildx build \
+    -q \
+    $1 \
+  )

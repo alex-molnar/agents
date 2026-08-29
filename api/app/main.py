@@ -10,15 +10,15 @@ from app.middleware.metrics import metrics_middleware, startup_event
 from uvicorn import run
 
 
-app = FastAPI()
+api_app = FastAPI()
 
-app.include_router(health.router)
-app.include_router(agents.router)
-app.include_router(metrics.router)
+api_app.include_router(health.router)
+api_app.include_router(agents.router)
+api_app.include_router(metrics.router)
 
-app.middleware("http")(logging_endpoint)
-app.middleware("http")(metrics_middleware)
-app.add_middleware(
+api_app.middleware("http")(logging_endpoint)
+api_app.middleware("http")(metrics_middleware)
+api_app.add_middleware(
     CORSMiddleware,
     allow_origins=getenv("CORS_ALLOW_ORIGINS", "*").split(","),
     allow_credentials=getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true",
@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=getenv("CORS_ALLOW_HEADERS", "*").split(","),
 )
 
-app.on_event("startup")(startup_event) # TODO update this to non deprecated one
+api_app.on_event("startup")(startup_event) # TODO update this to non deprecated one
 
 log = getLogger(__name__)
 
@@ -36,7 +36,7 @@ basicConfig(
 )
 
 
-@app.get("/models", status_code=200)
+@api_app.get("/models", status_code=200)
 def get_models(response: Response):
     try:
         return available_models()
@@ -49,4 +49,9 @@ def get_models(response: Response):
         }
 
 if __name__ == "__main__":
-    run(app, host="0.0.0.0", port=8000)
+    # run(app, host="0.0.0.0", port=8000)
+
+    from app.tools.get_temparature import GetTemperatureTool
+    from app.agents.common import Agent
+    a = Agent('temp getting agent', [GetTemperatureTool()])
+    a.execute("What is the temparature in Budapest and Oslo?")

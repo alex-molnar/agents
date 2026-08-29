@@ -21,6 +21,15 @@ def __get_req_body(prompt: str, model: str = "qwen2.5:3b", history: list = [], t
         "think": False  # TODO: think about thinking
     }
 
+def __get_req_body_for_tool(model: str = "qwen2.5:3b", history: list = [], tools: list = []):
+    return {
+        "model": model,
+        "messages": history,
+        "tools": tools,
+        "stream": True,
+        "think": False  # TODO: think about thinking
+    }
+
 def streamed_chat(url: str, prompt: str, model: str):
     response = post(url.format(path='chat'), json=__get_req_body(prompt, model=model, history=history, tools=tools), stream=True)
     if response.status_code != 200:
@@ -47,3 +56,31 @@ def streamed_chat2(url: str, prompt: str, model: str, tools: list = []):
             else:
                 yield {'event': 'message', 'data': data['message']}
                 yield f"event: message\ndata: {dumps({'message': data['message']})}\n\n"
+
+def streamed_chat_for_agent(url: str, prompt: str, model: str, tools: list = [], history: list = []):
+    response = post(url.format(path='chat'), json=__get_req_body(prompt, model=model, tools=tools, history=history), stream=True)
+
+    if response.status_code != 200:
+        log.warning(f"Error sending request to {url.format(path='chat')}: {response.status_code} - {response.text}")
+        return {
+            'event': 'failure',
+            'message': f"Error sending request to {url.format(path='chat')}: {response.status_code} - {response.text}"
+        }
+
+    for line in response.iter_lines():
+        if line:
+            yield line.decode('utf-8')
+
+def tool_call_for_agent(url: str, tools: list = [], history: list = []):
+    response = post(url.format(path='chat'), json=__get_req_body_for_tool(tools=tools, history=history), stream=True)
+    
+    if response.status_code != 200:
+        log.warning(f"Error sending request to {url.format(path='chat')}: {response.status_code} - {response.text}")
+        return {
+            'event': 'failure',
+            'message': f"Error sending request to {url.format(path='chat')}: {response.status_code} - {response.text}"
+        }
+
+    for line in response.iter_lines():
+        if line:
+            yield line.decode('utf-8')

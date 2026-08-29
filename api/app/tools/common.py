@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+
 def create_param(name: str, description: str, type: str = 'string', required: bool = False):
     return {
         'name': name,
@@ -32,3 +35,36 @@ def get_tool_request_body(name: str, description: str, parameters: list[dict] = 
             }
         }
     }
+
+@dataclass
+class ToolParamProperties:
+    type: str
+    description: str
+
+class Tool:
+    def __init__(self, name: str, description: str):
+        self.name = name
+        self.description = description
+
+    def call(self, arguments: dict):
+        raise NotImplementedError()
+
+    def get_paramproperties(self) -> dict[str, dict[str, str]]:
+        raise NotImplementedError()
+
+    def get_required(self) -> list[str]:
+        raise NotImplementedError()
+
+    def get_request_body(self) -> dict:
+        return {
+            'type': 'function',
+            'function': {
+                'name': self.name,
+                'description': self.description,
+                'parameters': {
+                    'type': 'object',
+                    'required': self.get_required(),
+                    'properties': self.get_paramproperties()
+                }
+            }
+        }

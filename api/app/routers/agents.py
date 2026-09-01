@@ -2,7 +2,6 @@ from fastapi import APIRouter, Response
 from fastapi.responses import StreamingResponse
 
 from app.agents.chatbot import chat
-from app.agents.weather import ask_for_weather
 
 
 router = APIRouter(
@@ -23,13 +22,6 @@ def read_items():
 def read_chatbot(model: str, prompt: str, response: Response):
     return StreamingResponse(
         chat(prompt=prompt, model=model),
-        media_type="text/event-stream"
-    )
-
-@router.get("/weather")
-def read_chatbot(model: str, prompt: str, response: Response):
-    return StreamingResponse(
-        ask_for_weather(prompt=prompt, model=model),
         media_type="text/event-stream"
     )
 

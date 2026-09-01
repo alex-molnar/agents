@@ -1,6 +1,6 @@
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 @dataclass
 class Function:
@@ -22,16 +22,6 @@ class ToolCall:
                 'arguments': self.function.arguments
             }
         }
-
-@dataclass
-class LlmCall:
-    url: str
-    tool_descriptions: list[dict]
-
-@dataclass
-class Job:
-    tool_call: ToolCall | None = None
-    llm_call: LlmCall | None = None
 
 @dataclass
 class Message:

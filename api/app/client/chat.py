@@ -6,7 +6,6 @@ from json import loads, dumps
 log = getLogger(__name__)
 
 
-
 def __get_req_body(prompt: str, model: str = "qwen2.5:3b", history: list = [], tools: list = []):
     return {
         "model": model,
@@ -22,7 +21,7 @@ def __get_req_body(prompt: str, model: str = "qwen2.5:3b", history: list = [], t
     }
 
 def streamed_chat(url: str, prompt: str, model: str):
-    response = post(url.format(path='chat'), json=__get_req_body(prompt, model=model), stream=True)
+    response = post(url.format(path='chat'), json=__get_req_body(prompt, model=model, history=[], tools=[]), stream=True)
     if response.status_code != 200:
         log.warning(f"Error sending request to {url.format(path='chat')}: {response.status_code} - {response.text}")
         return f"Error sending request: {response.status_code} - {response.text}"

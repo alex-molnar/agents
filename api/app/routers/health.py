@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter, Response
 
-from app.client.local import available_models, get_version
+from app.client.local import get_version
 
 
 router = APIRouter(

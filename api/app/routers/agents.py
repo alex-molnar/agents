@@ -24,3 +24,4 @@ def read_chatbot(model: str, prompt: str, response: Response):
         chat(prompt=prompt, model=model),
         media_type="text/event-stream"
     )
+

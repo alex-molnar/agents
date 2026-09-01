@@ -49,9 +49,4 @@ def get_models(response: Response):
         }
 
 if __name__ == "__main__":
-    # run(app, host="0.0.0.0", port=8000)
-
-    from app.tools.get_temparature import GetTemperatureTool
-    from app.agents.common import Agent
-    a = Agent('temp getting agent', [GetTemperatureTool()])
-    a.execute("What is the temparature in Budapest and Oslo?")
+    run(api_app, host="0.0.0.0", port=8000)

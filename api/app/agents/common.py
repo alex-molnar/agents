@@ -71,13 +71,3 @@ class Agent:
 
         yield {'event': 'finished'}
 
-
-if __name__ == '__main__':
-    from app.tools.get_temparature import GetTemperatureTool
-    a = Agent('temp getting agent', [GetTemperatureTool()])
-    for output in a.execute("What is the temparature in Budapest and Oslo?", 'qwen2.5:3b'):
-        if output['event'] == 'message':
-            print(output['data'], end='')
-        else:
-            print(output)
-    # a.execute("What is your name", 'qwen2.5:3b')

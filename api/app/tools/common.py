@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+from multiprocessing.connection import Connection
 
 def create_param(name: str, description: str, type: str = 'string', required: bool = False):
     return {
@@ -46,7 +46,7 @@ class Tool:
         self.name = name
         self.description = description
 
-    def call(self, arguments: dict):
+    def call(self, _: dict, __: Connection):
         raise NotImplementedError()
 
     def get_paramproperties(self) -> dict[str, dict[str, str]]:

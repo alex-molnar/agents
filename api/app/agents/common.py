@@ -1,105 +1,81 @@
 from app.tools.common import Tool
-from app.client.chat import streamed_chat_for_agent, tool_call_for_agent
+from app.client.agent import chat_for_agent
 from os import getenv
 from json import loads
-from types import SimpleNamespace
-from app.model.response import LlmCall, Response, ToolCall, Job, response_object_hook
+from app.model.response import Response, ToolCall, response_object_hook
+from multiprocessing import Process, Queue
+from multiprocessing.connection import Connection, Pipe
 
 OLLAMA_LOCAL_URL = getenv('OLLAMA_API_URL', 'http://localhost:11434/api/{path}')
 
+class AgentJob:
+    def __init__(self, name: str, pipe: Connection):
+        self.name = name
+        self.pipe = pipe
+
 class Agent:
-    def __init__(self, name: str, tools: list[Tool], streaming: bool = True):
+    def __init__(self, name: str, tools: list[Tool], system_prompt: str = "", streaming: bool = True):
         self.name = name
         self.tools = tools
         self.tool_descriptions = [t.get_request_body() for t in self.tools]
+        self.system_prompt = system_prompt
         self.streaming = streaming
+
+        self.job_queue: Queue[AgentJob] = Queue()
 
     def call_tool(self, tool_call: ToolCall):
         tool: Tool = next((x for x in self.tools if x.name == tool_call.function.name), None)
-        return {
-            "role": "tool",
-            "content": tool.call(tool_call.function.arguments) if tool else 'Tool could not be found',
-            "tool_name": tool_call.function.name
-        }
+        pipe_end, pipe_start = Pipe()
+        if tool:
+            p = Process(target=tool.call, args=(tool_call.function.arguments,pipe_start))
+            p.start()
+            self.job_queue.put(AgentJob(name=tool_call.function.name, pipe=pipe_end))
+        else: 
+            p = Process(target=lambda pipe: pipe.send('Tool could not be found'), args=(pipe_start,))
+            p.start()
+            self.job_queue.put(AgentJob(name=tool_call.function.name, pipe=pipe_end))
 
     def execute(self, prompt: str, model: str):
-        tool_calls = []
-        history = [{
-            'role': 'user',
-            'content': prompt
-        }]
-        for message in streamed_chat_for_agent(OLLAMA_LOCAL_URL, prompt, model, self.tool_descriptions):
-            data: Response = loads(message, object_hook=response_object_hook)
-            if data.message.tool_calls:
-                tool_calls.extend([Job(tool_call=tc) for tc in data.message.tool_calls])
-                history.append(data.message.as_history())
-            elif data.done and len(tool_calls) == 0:
-                yield {'event': 'done'}
-            else:
-                yield {'event': 'message', 'data': data.message.content}
+        executable_prompt: str | bool = self.system_prompt + "\n" + prompt
 
-        yield from self.agent_loop(prompt, model, history=history, jobs=tool_calls + [Job(llm_call=LlmCall(url=OLLAMA_LOCAL_URL, tool_descriptions=self.tool_descriptions))])
+        history = []
 
-    def agent_loop(self, prompt: str, model: str, history: list[dict], jobs: list[Job]):
-        while jobs:
-            job = jobs.pop(0)
-            if job.tool_call:
-                tool_call = job.tool_call
-                yield {'event': 'tool_call', 'data': {'name': tool_call.function.name, 'args': tool_call.function.arguments}}
-                result = self.call_tool(tool_call)
-                history.append(result)
-                yield {'event': 'tool_result', 'data': result}
-            else:
-                llm_call = job.llm_call
-                yield {'event': 'llm_call', 'data': llm_call.url}
-                tool_requested = False
-                for message in tool_call_for_agent(llm_call.url, llm_call.tool_descriptions, history=history):
-                    data: Response = loads(message, object_hook=response_object_hook)
-                    if data.message.tool_calls:
-                        tool_requested = True
-                        for tool_call in data.message.tool_calls:
-                            jobs.append(Job(tool_call=tool_call))
-                            history.append(data.message.as_history())
-                    elif data.done:
-                        if tool_requested:
-                            jobs.append(Job(llm_call=llm_call))
-                        yield {'event': 'done'}
-                    else:
-                        yield {'event': 'message', 'data': data.message.content}
+        while executable_prompt:
+            used_prompt = executable_prompt if type(executable_prompt) == str else None
+            executable_prompt = False
 
+            for message in chat_for_agent(OLLAMA_LOCAL_URL, used_prompt, model, self.tool_descriptions, history):
+                data: Response = loads(message, object_hook=response_object_hook)
+                if data.message.tool_calls:
+                    executable_prompt = True
+                    for tc in data.message.tool_calls:
+                        self.call_tool(tc)
+                elif data.done and self.job_queue.empty():
+                    yield {'event': 'prompt_finished'}
+                else:
+                    yield {'event': 'message', 'data': data.message.content}
+    
+            while not self.job_queue.empty():
+                job = self.job_queue.get()
+                yield {'event': 'tool_call', 'name': job.name}
+                try:
+                    result = job.pipe.recv()
+                    yield {'event': 'tool_result', 'name': job.name, 'data': result}
 
+                    if len(history) == 0:
+                        history.append({'role': 'user', 'content': self.system_prompt + "\n" + prompt})
 
-    # def execute(self, prompt: str, model: str):
-    #     history = []
-    #     tool_needed = True
-    #     first = True
-    #     while tool_needed:
-    #         tool_needed = False
-    #         gen = streamed_chat_for_agent(OLLAMA_LOCAL_URL, prompt, model, self.tool_descriptions, history=history) if first else tool_call_for_agent(OLLAMA_LOCAL_URL, self.tool_descriptions, history=history)
-    #         for message in gen:
-    #             data: Response = loads(message, object_hook=response_object_hook)
-    #             if data.message.tool_calls:
-    #                 for tool_call in data.message.tool_calls:
-    #                     if len(history) == 0:
-    #                         print("here")
-    #                         history.append({
-    #                             'role': 'user',
-    #                             'content': prompt
-    #                         })
-    #                     tool_needed = True
-    #                     history.append(self.call_tool(tool_call))
-    #                     yield "Calling tool: " + tool_call.function.name
-    #             elif data.done:
-    #                 yield "Done"
-    #             else:
-    #                 yield data.message.content
-    #         first = False
+                    history.append({'role': 'tool', 'tool_name': job.name, 'content': result})
+                except EOFError as e:
+                    yield {'event': 'tool_error', 'name': job.name, 'error': str(e)}
+
+        yield {'event': 'finished'}
 
 
 if __name__ == '__main__':
     from app.tools.get_temparature import GetTemperatureTool
     a = Agent('temp getting agent', [GetTemperatureTool()])
-    for output in a.execute("What is the temparature in Budapest and London?", 'qwen2.5:3b'):
+    for output in a.execute("What is the temparature in Budapest and Oslo?", 'qwen2.5:3b'):
         if output['event'] == 'message':
             print(output['data'], end='')
         else:

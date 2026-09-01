@@ -1,4 +1,5 @@
 from app.tools.common import Tool
+from multiprocessing.connection import Connection
 
 class GetTemperatureTool(Tool):
     def __init__(self):
@@ -15,9 +16,11 @@ class GetTemperatureTool(Tool):
     def get_required(self) -> list[str]:
         return ['city']
 
-    def call(self, arguments: dict):
+    def call(self, arguments: dict, pipe: Connection):
         city = arguments.get('city')
-        return self.get_temparature(city)
+        result = self.get_temparature(city)
+        pipe.send(result)
+        pipe.close()
 
     def get_temparature(self, city: str):
         if city == 'London':

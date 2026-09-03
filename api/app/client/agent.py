@@ -1,12 +1,15 @@
 from requests import post
-import logging as log
+from logging import getLogger
 
 from app.client.common import get_req_body
 
 
+log = getLogger(__name__)
+
+
 def chat_for_agent(url: str, prompt: str | None = None, model: str = "qwen2.5:3b", tools: list = [], history: list = []):
     body = get_req_body(prompt=prompt, model=model, tools=tools, history=history)
-    print(f'Calling chat API with body: {body}')
+    log.debug(f'Calling chat API with body: {body}')
     response = post(url.format(path='chat'), json=body, stream=True)
 
     if response.status_code != 200:

@@ -30,9 +30,7 @@ function sendPrompt() {
             thinking = false;
             response.textContent = ""
         }
-        let data = JSON.parse(event.data);
-        message = data.message;
-        response.textContent += message;
+        response.textContent += event.data;
         card.classList.remove("thinking");
         card.classList.add("loading");
     });

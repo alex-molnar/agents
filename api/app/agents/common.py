@@ -1,12 +1,18 @@
 from app.tools.common import Tool
-from app.client.agent import chat_for_agent
+from app.client.common import chat
 from os import getenv
 from json import loads
 from app.model.response import Response, ToolCall, response_object_hook
 from multiprocessing import Process, Queue
 from multiprocessing.connection import Connection, Pipe
+from logging import getLogger
+
+
+log = getLogger(__name__)
+
 
 OLLAMA_LOCAL_URL = getenv('OLLAMA_API_URL', 'http://localhost:11434/api/{path}')
+
 
 class AgentJob:
     def __init__(self, name: str, pipe: Connection):
@@ -25,26 +31,32 @@ class Agent:
 
     def call_tool(self, tool_call: ToolCall):
         tool: Tool = next((x for x in self.tools if x.name == tool_call.function.name), None)
+        log.info(f'Found tool {tool.name} for asked tool call {tool_call.id}' if tool else f'Could not find tool {tool_call.function.name} for tool call {tool_call.id}')
         pipe_end, pipe_start = Pipe()
+
         if tool:
             p = Process(target=tool.call, args=(tool_call.function.arguments,pipe_start))
             p.start()
             self.job_queue.put(AgentJob(name=tool_call.function.name, pipe=pipe_end))
+            log.debug(f'Tool {tool_call.id} spawned with parameters {tool_call.function.arguments}')
         else: 
             p = Process(target=lambda pipe: pipe.send('Tool could not be found'), args=(pipe_start,))
             p.start()
             self.job_queue.put(AgentJob(name=tool_call.function.name, pipe=pipe_end))
+            log.debug(f'Tool {tool_call.id} could not be found, spawned fallback process')
 
     def execute(self, prompt: str, model: str):
-        executable_prompt: str | bool = self.system_prompt + "\n" + prompt
+        executable_prompt: str | bool = prompt
+        log.info(f'Agent [{self.name} @ {model}] executing {executable_prompt}')
 
-        history = []
+        history = [] if self.system_prompt == "" else [{'role': 'user', 'content': self.system_prompt}]
+        history_init_length = len(history)
 
         while executable_prompt:
             used_prompt = executable_prompt if type(executable_prompt) == str else None
             executable_prompt = False
 
-            for message in chat_for_agent(OLLAMA_LOCAL_URL, used_prompt, model, self.tool_descriptions, history):
+            for message in chat(used_prompt, model, self.tool_descriptions, history):
                 data: Response = loads(message, object_hook=response_object_hook)
                 if data.message.tool_calls:
                     executable_prompt = True
@@ -62,12 +74,12 @@ class Agent:
                     result = job.pipe.recv()
                     yield {'event': 'tool_result', 'name': job.name, 'data': result}
 
-                    if len(history) == 0:
-                        history.append({'role': 'user', 'content': self.system_prompt + "\n" + prompt})
+                    if len(history) == history_init_length:
+                        history.append({'role': 'user', 'content': prompt})
 
                     history.append({'role': 'tool', 'tool_name': job.name, 'content': result})
                 except EOFError as e:
                     yield {'event': 'tool_error', 'name': job.name, 'error': str(e)}
 
-        yield {'event': 'finished'}
+        yield {'event': 'end', 'data': ''}
 

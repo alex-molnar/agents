@@ -14,6 +14,7 @@ def read_items():
     return [
         {
             "name": "Chatbot",
+            "path": '/chatbot',
             "description": "A chatbot agent that can answer single questions.",
         }
     ]

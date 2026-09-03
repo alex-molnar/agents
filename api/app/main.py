@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from logging import basicConfig, getLogger, INFO
 from os import getenv
 
+from app.fastapi.routers import agents, health
 from app.client.local import available_models
-from app.routers import agents, health, metrics
-from app.middleware.logs import logging_endpoint
-from app.middleware.metrics import metrics_middleware, startup_event
+from app.fastapi.routers import metrics
+from app.fastapi.middleware.logs import logging_endpoint
+from app.fastapi.middleware.metrics import metrics_middleware, startup_event
 from uvicorn import run
 
 

@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "example_remote": {
+      "url": "https://example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer $EXAMPLE_MCP_TOKEN"
+      },
+      "enabled": false
+    },
+    "example_local": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/tmp"
+      ],
+      "enabled": false
+    }
+  }
+}
